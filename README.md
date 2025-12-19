@@ -26,7 +26,19 @@
     cd AE_Dumper
     ```
 
-2.  **Install Python Dependencies**:
+2.  **Create and Activate Virtual Environment**:
+    *   **Windows**:
+        ```bash
+        python -m venv .venv
+        .venv\Scripts\activate
+        ```
+    *   **Linux/Mac**:
+        ```bash
+        python3 -m venv .venv
+        source .venv/bin/activate
+        ```
+
+3.  **Install Python Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
