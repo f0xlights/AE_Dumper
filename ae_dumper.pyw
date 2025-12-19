@@ -249,6 +249,21 @@ class AEDumperGUI:
             self.root.clipboard_append(content)
             messagebox.showinfo("Copiato", "URL copiato negli appunti!")
 
+    def spawn_download_thread(self, url, label, filename):
+        """Helper to start download from UI button click"""
+        # Disable buttons to prevent double click
+        for widget in self.res_frame.winfo_children():
+            widget.destroy()
+            
+        def run_dl():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.download_stream(url, label, filename))
+            loop.close()
+            
+        threading.Thread(target=run_dl, daemon=True).start()
+
+
     def start_finding(self):
         url = self.url_entry.get().strip()
         if not url:
