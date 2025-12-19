@@ -64,10 +64,13 @@
 
 ## 🚀 Usage
 
-Run the script using Python:
+**The easiest way:** Double-click on `run.bat` (Windows). This will automatically use the virtual environment without you needing to do anything.
+
+Alternatively, from terminal:
 
 ```bash
-python ae_dumper.pyw
+# Windows (using venv)
+.venv\Scripts\pythonw.exe ae_dumper.pyw
 ```
 
 ### Single Download
