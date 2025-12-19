@@ -22,7 +22,7 @@
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/AE_Dumper.git
+    git clone https://github.com/f0xlights/AE_Dumper.git
     cd AE_Dumper
     ```
 
