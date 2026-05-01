@@ -1,0 +1,11 @@
+{
+  "download_path": "C:\\Users\\TUO_UTENTE\\Downloads",
+  "quality": "Chiedi sempre",
+  "filename_template": "{date} - {cast} - {title} [{studio}]",
+  "threads": "16",
+  "flag_no_log": true,
+  "flag_no_date": true,
+  "proxy_enabled": false,
+  "proxy_host": "192.168.0.1",
+  "proxy_port": "1080"
+}
