@@ -21,7 +21,7 @@ class AEDumperGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("AdultEmpire Movie Dumper")
-        self.root.geometry("700x500")
+        self.root.geometry("800x650")
         self.root.configure(bg="#1a1a1a")
         
         # Set Icon
@@ -59,21 +59,21 @@ class AEDumperGUI:
 
         # Tab 1: Single Video
         self.tab_single = tk.Frame(self.notebook, bg="#1a1a1a")
-        self.notebook.add(self.tab_single, text="Singolo Video")
+        self.notebook.add(self.tab_single, text="Single Video")
 
         # Tab 2: Batch Download
         self.tab_batch = tk.Frame(self.notebook, bg="#1a1a1a")
-        self.notebook.add(self.tab_batch, text="Batch Download (Coda)")
+        self.notebook.add(self.tab_batch, text="Batch Download (Queue)")
         
         # Tab 3: Settings
         self.tab_settings = tk.Frame(self.notebook, bg="#1a1a1a")
-        self.notebook.add(self.tab_settings, text="Impostazioni")
+        self.notebook.add(self.tab_settings, text="Settings")
 
         # --- Single Video Layout ---
         input_frame = tk.Frame(self.tab_single, bg="#1a1a1a")
         input_frame.pack(fill="x", padx=20, pady=10)
 
-        lbl_url = ttk.Label(input_frame, text="Incolla il link del video:")
+        lbl_url = ttk.Label(input_frame, text="Paste video link:")
         lbl_url.pack(anchor="w")
 
         self.url_entry = ttk.Entry(input_frame, width=80)
@@ -88,7 +88,7 @@ class AEDumperGUI:
         result_frame = tk.Frame(self.tab_single, bg="#1a1a1a")
         result_frame.pack(fill="both", expand=True, padx=20, pady=5)
 
-        lbl_res = ttk.Label(result_frame, text="Log / Risultato:")
+        lbl_res = ttk.Label(result_frame, text="Log / Result:")
         lbl_res.pack(anchor="w")
 
         # Log color changed to Orange #ff9900
@@ -104,14 +104,14 @@ class AEDumperGUI:
         batch_frame = tk.Frame(self.tab_batch, bg="#1a1a1a")
         batch_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
-        lbl_batch = ttk.Label(batch_frame, text="Incolla la lista di link (uno per riga):")
+        lbl_batch = ttk.Label(batch_frame, text="Paste link list (one per line):")
         lbl_batch.pack(anchor="w")
 
         self.batch_text = tk.Text(batch_frame, height=15, bg="#333333", fg="white", font=("Consolas", 9), insertbackground="white")
         self.batch_text.pack(fill="both", expand=True, pady=5)
         self.create_context_menu(self.batch_text)
 
-        self.btn_batch = ttk.Button(self.tab_batch, text="AVVIA BATCH", command=self.start_batch)
+        self.btn_batch = ttk.Button(self.tab_batch, text="START BATCH", command=self.start_batch)
         self.btn_batch.pack(pady=10)
 
         # --- Settings Tab Layout ---
@@ -119,10 +119,10 @@ class AEDumperGUI:
         sett_cnt.pack(fill="both", expand=True, padx=20, pady=10)
 
         # Filename Template
-        lbl_tmpl = ttk.Label(sett_cnt, text="Template Nome File:")
+        lbl_tmpl = ttk.Label(sett_cnt, text="Filename Template:")
         lbl_tmpl.pack(anchor="w", pady=(0, 2))
         
-        lbl_info = tk.Label(sett_cnt, text="Variabili: {date}, {cast}, {title}, {studio}", bg="#1a1a1a", fg="#888888", font=("Segoe UI", 8))
+        lbl_info = tk.Label(sett_cnt, text="Variables: {date}, {cast}, {title}, {studio}", bg="#1a1a1a", fg="#888888", font=("Segoe UI", 8))
         lbl_info.pack(anchor="w", pady=(0, 5))
 
         self.tmpl_var = tk.StringVar(value=self.config.get("filename_template", "{date} - {cast} - {title} [{studio}]"))
@@ -132,7 +132,7 @@ class AEDumperGUI:
         self.create_context_menu(self.ent_tmpl)
         
         # N_m3u8DL-RE Options
-        lbl_opts = ttk.Label(sett_cnt, text="Opzioni Downloader (N_m3u8DL-RE):")
+        lbl_opts = ttk.Label(sett_cnt, text="Downloader Options (N_m3u8DL-RE):")
         lbl_opts.pack(anchor="w", pady=(15, 5))
         
         # Threads
@@ -147,23 +147,23 @@ class AEDumperGUI:
         # Flags
         self.var_no_log = tk.BooleanVar(value=self.config.get("flag_no_log", True))
         self.var_no_log.trace("w", self.save_config_callback)
-        chk_log = tk.Checkbutton(sett_cnt, text="--no-log (Disabilita log file del tool)", variable=self.var_no_log, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
+        chk_log = tk.Checkbutton(sett_cnt, text="--no-log (Disable tool log files)", variable=self.var_no_log, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
         chk_log.pack(anchor="w")
 
         self.var_no_date = tk.BooleanVar(value=self.config.get("flag_no_date", True))
         self.var_no_date.trace("w", self.save_config_callback)
-        chk_date = tk.Checkbutton(sett_cnt, text="--no-date-info (Non scrivere data nel file)", variable=self.var_no_date, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
+        chk_date = tk.Checkbutton(sett_cnt, text="--no-date-info (Don't write date in file)", variable=self.var_no_date, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
         chk_date.pack(anchor="w")
 
         # --- Proxy Settings ---
         tk.Frame(sett_cnt, bg="#444444", height=1).pack(fill="x", pady=(15, 5))
-        lbl_proxy_title = tk.Label(sett_cnt, text="Proxy SOCKS5", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold"))
+        lbl_proxy_title = tk.Label(sett_cnt, text="Proxy", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold"))
         lbl_proxy_title.pack(anchor="w", pady=(0, 5))
 
         self.var_proxy_enabled = tk.BooleanVar(value=self.config.get("proxy_enabled", False))
         self.var_proxy_enabled.trace("w", self.save_config_callback)
         chk_proxy = tk.Checkbutton(
-            sett_cnt, text="Abilita Proxy SOCKS5",
+            sett_cnt, text="Enable Proxy",
             variable=self.var_proxy_enabled,
             bg="#1a1a1a", fg="white", selectcolor="#333333",
             activebackground="#1a1a1a", activeforeground="white",
@@ -174,9 +174,16 @@ class AEDumperGUI:
         fr_proxy = tk.Frame(sett_cnt, bg="#1a1a1a")
         fr_proxy.pack(anchor="w", pady=(5, 0))
 
+        tk.Label(fr_proxy, text="Type:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
+        self.proxy_type_var = tk.StringVar(value=self.config.get("proxy_type", "socks5"))
+        self.cmb_proxy_type = ttk.Combobox(fr_proxy, textvariable=self.proxy_type_var, state="readonly", width=8)
+        self.cmb_proxy_type['values'] = ["socks5", "http"]
+        self.cmb_proxy_type.pack(side="left", padx=(5, 15))
+        self.proxy_type_var.trace("w", self.save_config_callback)
+
         tk.Label(fr_proxy, text="Host:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
         self.proxy_host_var = tk.StringVar(value=self.config.get("proxy_host", "192.168.0.90"))
-        self.ent_proxy_host = ttk.Entry(fr_proxy, textvariable=self.proxy_host_var, width=22)
+        self.ent_proxy_host = ttk.Entry(fr_proxy, textvariable=self.proxy_host_var, width=18)
         self.ent_proxy_host.pack(side="left", padx=(5, 15))
         self.proxy_host_var.trace("w", self.save_config_callback)
         self.create_context_menu(self.ent_proxy_host)
@@ -188,13 +195,15 @@ class AEDumperGUI:
         self.proxy_port_var.trace("w", self.save_config_callback)
         self.create_context_menu(self.ent_proxy_port)
 
+        tk.Label(sett_cnt, text="Privoxy (HTTP): port 8118  |  microsocks (SOCKS5): port 9118",
+                 bg="#1a1a1a", fg="#666666", font=("Segoe UI", 8)).pack(anchor="w", pady=(3, 0))
 
         # --- Shared Settings Area (Bottom) ---
         settings_frame = tk.Frame(self.root, bg="#1a1a1a")
         settings_frame.pack(fill="x", padx=10, pady=5)
 
         # Download Folder
-        lbl_dl = tk.Label(settings_frame, text="Cartella Download:", bg="#1a1a1a", fg="white")
+        lbl_dl = tk.Label(settings_frame, text="Download Folder:", bg="#1a1a1a", fg="white")
         lbl_dl.pack(side="left")
 
         self.dl_path_var = tk.StringVar(value=self.config.get("download_path", os.path.join(os.path.expanduser("~"), "Downloads")))
@@ -205,25 +214,27 @@ class AEDumperGUI:
         btn_browse.pack(side="left")
 
         # Quality
-        lbl_qual = tk.Label(settings_frame, text="   Qualità:", bg="#1a1a1a", fg="white")
+        lbl_qual = tk.Label(settings_frame, text="   Quality:", bg="#1a1a1a", fg="white")
         lbl_qual.pack(side="left", padx=(10, 5))
         
-        self.qual_var = tk.StringVar(value=self.config.get("quality", "Chiedi sempre"))
+        self.qual_var = tk.StringVar(value=self.config.get("quality", "Always ask"))
         self.qual_var.trace("w", self.save_config_callback) # Save on change
         self.cmb_qual = ttk.Combobox(settings_frame, textvariable=self.qual_var, state="readonly", width=12)
-        self.cmb_qual['values'] = ["Chiedi sempre", "Migliore", "2160p", "1440p", "1080p", "720p", "480p"]
+        self.cmb_qual['values'] = ["Always ask", "Best", "2160p", "1440p", "1080p", "720p", "480p"]
         self.cmb_qual.pack(side="left")
 
-        # Headless
-        self.var_headless = tk.BooleanVar(value=True)
-        self.chk_headless = tk.Checkbutton(settings_frame, text="Headless", variable=self.var_headless, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
-        self.chk_headless.pack(side="left", padx=10)
+        # Login Button
+        self.btn_login = ttk.Button(settings_frame, text="🔑 LOGIN", command=self.start_login, width=10)
+        self.btn_login.pack(side="left", padx=(15, 5))
+
+        self.lbl_login_status = tk.Label(settings_frame, text="● Not logged in", bg="#1a1a1a", fg="#ff4444", font=("Segoe UI", 9))
+        self.lbl_login_status.pack(side="left")
 
         # --- Progress Area (Status Label Only) ---
         progress_frame = tk.Frame(self.root, bg="#1a1a1a")
         progress_frame.pack(fill="x", padx=10, pady=(0, 10))
 
-        self.lbl_status = tk.Label(progress_frame, text="Pronto.", bg="#1a1a1a", fg="white", anchor="w")
+        self.lbl_status = tk.Label(progress_frame, text="Ready.", bg="#1a1a1a", fg="white", anchor="w")
         self.lbl_status.pack(fill="x")
         
         # Removed Progress Bar widget as requested
@@ -264,6 +275,7 @@ class AEDumperGUI:
         self.config["flag_no_date"] = self.var_no_date.get()
         # Proxy
         self.config["proxy_enabled"] = self.var_proxy_enabled.get()
+        self.config["proxy_type"] = self.proxy_type_var.get()
         self.config["proxy_host"] = self.ent_proxy_host.get().strip()
         self.config["proxy_port"] = self.ent_proxy_port.get().strip()
         
@@ -291,7 +303,7 @@ class AEDumperGUI:
         if content.startswith("http"):
             self.root.clipboard_clear()
             self.root.clipboard_append(content)
-            messagebox.showinfo("Copiato", "URL copiato negli appunti!")
+            messagebox.showinfo("Copied", "URL copied to clipboard!")
 
     def spawn_download_thread(self, url, label, filename):
         """Helper to start download from UI button click"""
@@ -311,7 +323,7 @@ class AEDumperGUI:
     def start_finding(self):
         url = self.url_entry.get().strip()
         if not url:
-            messagebox.showwarning("Errore", "Per favore inserisci un URL valido.")
+            messagebox.showwarning("Error", "Please enter a valid URL.")
             return
 
         self.btn_find.config(state="disabled")
@@ -320,18 +332,19 @@ class AEDumperGUI:
         for widget in self.res_frame.winfo_children():
             widget.destroy()
             
-        self.log("Inizializzazione browser...")
+        self.log("Initializing browser...")
         
         # Start the background task
         threading.Thread(target=self.run_async_task, args=(url,), daemon=True).start()
 
     def _get_proxy_url(self):
-        """Restituisce la stringa del proxy socks5 se abilitato, altrimenti None."""
+        """Restituisce la stringa del proxy (socks5:// o http://) se abilitato, altrimenti None."""
         if self.var_proxy_enabled.get():
             host = self.ent_proxy_host.get().strip()
             port = self.ent_proxy_port.get().strip()
+            scheme = self.proxy_type_var.get()  # 'socks5' o 'http'
             if host and port:
-                return f"socks5://{host}:{port}"
+                return f"{scheme}://{host}:{port}"
         return None
 
     async def parse_m3u8(self, m3u8_url, filename="master"):
@@ -367,27 +380,27 @@ class AEDumperGUI:
             await self.display_resolutions(resolutions, filename)
 
         except Exception as e:
-            self.root.after(0, lambda: self.log(f"Errore parsing M3U8: {str(e)}"))
+            self.root.after(0, lambda: self.log(f"M3U8 parsing error: {str(e)}"))
 
     async def display_resolutions(self, resolutions, filename="master"):
         if not resolutions:
-            self.root.after(0, lambda: self.log("Nessuna risoluzione trovata."))
+            self.root.after(0, lambda: self.log("No resolutions found."))
             return
             
-        self.root.after(0, lambda: self.log(f"Trovate {len(resolutions)} risoluzioni."))
-        self.root.after(0, lambda: self.log(f"Nome file: {filename}.mp4"))
+        self.root.after(0, lambda: self.log(f"Found {len(resolutions)} resolutions."))
+        self.root.after(0, lambda: self.log(f"Filename: {filename}.mp4"))
         
         resolutions.sort(key=lambda x: int(x['label'].replace('p', '')), reverse=True)
 
         preferred_qual = self.qual_var.get()
         
         # Auto-download logic
-        if preferred_qual != "Chiedi sempre":
+        if preferred_qual != "Always ask":
             target_res = None
             
-            if preferred_qual == "Migliore":
+            if preferred_qual == "Best":
                 target_res = resolutions[0]
-                self.root.after(0, lambda: self.log("Selezionata qualità migliore automatica."))
+                self.root.after(0, lambda: self.log("Selected automatic best quality."))
             else:
                 for res in resolutions:
                     if res['label'] == preferred_qual:
@@ -395,7 +408,7 @@ class AEDumperGUI:
                         break
                 
                 if not target_res:
-                    self.root.after(0, lambda: self.log(f"Qualità {preferred_qual} non trovata. Fallback sulla migliore ({resolutions[0]['label']})."))
+                    self.root.after(0, lambda: self.log(f"Quality {preferred_qual} not found. Falling back to best ({resolutions[0]['label']})."))
                     target_res = resolutions[0]
             
             if target_res:
@@ -410,7 +423,7 @@ class AEDumperGUI:
         
         # Helper to update UI from thread
         def show_buttons():
-            tk.Label(self.res_frame, text="Scarica Risoluzione:", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold")).pack(pady=5)
+            tk.Label(self.res_frame, text="Download Resolution:", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold")).pack(pady=5)
             btn_frame = tk.Frame(self.res_frame, bg="#1a1a1a")
             btn_frame.pack()
             
@@ -426,11 +439,11 @@ class AEDumperGUI:
         tool_path = os.path.join(os.getcwd(), "tools", "N_m3u8DL-RE.exe")
         
         if not os.path.exists(tool_path):
-            self.root.after(0, lambda: messagebox.showerror("Errore", f"Tool mancante: {tool_path}"))
+            self.root.after(0, lambda: messagebox.showerror("Error", f"Missing tool: {tool_path}"))
             return
             
         # Prepare Progress UI
-        self.root.after(0, lambda: self.lbl_status.config(text=f"Download in corso: {label}"))
+        self.root.after(0, lambda: self.lbl_status.config(text=f"Downloading: {label}"))
             
         # Build Command
         threads = self.threads_var.get()
@@ -450,7 +463,7 @@ class AEDumperGUI:
         if self.var_no_date.get():
             cmd.append("--no-date-info")
         
-        self.root.after(0, lambda: self.log(f"Avvio download {label}..."))
+        self.root.after(0, lambda: self.log(f"Starting download {label}..."))
         
         try:
             # Use asyncio subprocess to read output
@@ -492,7 +505,7 @@ class AEDumperGUI:
                                      
                                      self.result_text.insert(tk.END, f"Progress: {val:.1f}%\n")
                                      self.result_text.see(tk.END)
-                                     self.lbl_status.config(text=f"Scaricando... {val:.1f}%")
+                                     self.lbl_status.config(text=f"Downloading... {val:.1f}%")
 
                                  self.root.after(0, lambda v=p: update_log_progress(v))
                          except:
@@ -501,13 +514,13 @@ class AEDumperGUI:
             return_code = await process.wait()
             
             if return_code == 0:
-                self.root.after(0, lambda: self.log("Download Completato! 100%"))
-                self.root.after(0, lambda: self.lbl_status.config(text="Completato."))
+                self.root.after(0, lambda: self.log("Download Completed! 100%"))
+                self.root.after(0, lambda: self.lbl_status.config(text="Completed."))
             else:
-                 self.root.after(0, lambda: self.log(f"Errore download. Codice: {return_code}"))
+                 self.root.after(0, lambda: self.log(f"Download error. Code: {return_code}"))
 
         except Exception as e:
-            self.root.after(0, lambda: self.log(f"Eccezione download: {str(e)}"))
+            self.root.after(0, lambda: self.log(f"Download exception: {str(e)}"))
 
 
 
@@ -515,12 +528,12 @@ class AEDumperGUI:
     def start_batch(self):
         content = self.batch_text.get("1.0", tk.END).strip()
         if not content:
-            messagebox.showwarning("Errore", "Lista vuota.")
+            messagebox.showwarning("Error", "List is empty.")
             return
             
         urls = [line.strip() for line in content.split('\n') if line.strip()]
         if not urls:
-             messagebox.showwarning("Errore", "Nessun URL valido trovato.")
+             messagebox.showwarning("Error", "No valid URLs found.")
              return
 
         self.btn_batch.config(state="disabled")
@@ -542,15 +555,15 @@ class AEDumperGUI:
         urls = data if is_batch else [data]
         
         user_data_dir = os.path.join(os.getcwd(), "chrome_profile")
-        is_headless = self.var_headless.get()
+        is_headless = True  # Always headless for downloads as requested
 
         async with async_playwright() as p:
-            self.root.after(0, lambda: self.log(f"Avvio Sessione Browser (Headless={is_headless})..."))
+            self.root.after(0, lambda: self.log(f"Starting Browser Session (Headless={is_headless})..."))
             
             # 1. Initialize Browser & Login
             context, page = await self.init_browser_session(p, user_data_dir, is_headless)
             if not page:
-                self.root.after(0, lambda: self.log("Inizializzazione fallita."))
+                self.root.after(0, lambda: self.log("Initialization failed."))
                 self.reset_ui_state()
                 return
 
@@ -573,20 +586,20 @@ class AEDumperGUI:
                 await self.process_video(page, url)
             
             await context.close()
-            self.root.after(0, lambda: self.log("\nBatch Completato."))
+            self.root.after(0, lambda: self.log("\nBatch Completed."))
             self.reset_ui_state()
 
     def reset_ui_state(self):
         self.root.after(0, lambda: self.btn_find.config(state="normal"))
         self.root.after(0, lambda: self.btn_batch.config(state="normal"))
-        self.root.after(0, lambda: self.lbl_status.config(text="Pronto."))
+        self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
 
     async def init_browser_session(self, p, user_data_dir, is_headless):
         try:
             proxy_url = self._get_proxy_url()
             proxy_cfg = {"server": proxy_url} if proxy_url else None
             if proxy_url:
-                self.root.after(0, lambda pu=proxy_url: self.log(f"Proxy attivo: {pu}"))
+                self.root.after(0, lambda pu=proxy_url: self.log(f"Proxy active: {pu}"))
             context = await p.chromium.launch_persistent_context(
                 user_data_dir,
                 headless=is_headless,
@@ -598,10 +611,10 @@ class AEDumperGUI:
             page = context.pages[0] if context.pages else await context.new_page()
             await Stealth().apply_stealth_async(page)
             
-            # Login Check
-            self.root.after(0, lambda: self.log("Verifica Login..."))
+            # Verify saved session in chrome_profile
+            self.root.after(0, lambda: self.log("Verifying saved session..."))
             await page.goto("https://www.adultempire.com/", wait_until="domcontentloaded")
-            
+
             # Age Gate
             if "Confirm You Are Over 18" in await page.content():
                 self.root.after(0, lambda: self.log("Age Gate..."))
@@ -610,38 +623,25 @@ class AEDumperGUI:
                     await enter_btn.click()
                     await page.wait_for_load_state("networkidle")
 
-            # Check Status
             content = await page.content()
             if "Log Out" in content or "Sign Out" in content or "My Account" in content:
-                self.root.after(0, lambda: self.log("Login OK!"))
+                self.root.after(0, lambda: self.log("Session active OK!"))
+                self.root.after(0, lambda: self.lbl_login_status.config(text="● Logged in", fg="#44ff88"))
                 return context, page
-            
-            # Need Login
-            self.root.after(0, lambda: self.log("Login richiesto..."))
-            await page.goto("https://www.adultempire.com/account/loginpage?url=/account/accounthomepage/")
-            
-            self.root.after(0, lambda: self.log("Per favore esegui il login nel browser."))
-            
-            # Wait for Login
-            for _ in range(120):
-                content = await page.content()
-                if "Log Out" in content or "Sign Out" in content or "My Account" in content:
-                    self.root.after(0, lambda: self.log("Login Rilevato!"))
-                    return context, page
-                await asyncio.sleep(1)
-            
-            self.root.after(0, lambda: self.log("Timeout Login."))
-            await context.close()
-            return None, None
-            
+            else:
+                self.root.after(0, lambda: self.log("Session expired or missing. Use the LOGIN button."))
+                self.root.after(0, lambda: self.lbl_login_status.config(text="● Not logged in", fg="#ff4444"))
+                await context.close()
+                return None, None
+
         except Exception as e:
-            self.root.after(0, lambda: self.log(f"Errore Init Browser: {e}"))
+            self.root.after(0, lambda: self.log(f"Browser Init Error: {e}"))
             return None, None
 
     async def process_video(self, page, user_url):
         try:
             # Metadata
-            self.root.after(0, lambda: self.log("Analisi pagina prodotto..."))
+            self.root.after(0, lambda: self.log("Analyzing product page..."))
             scrape_url = user_url.split('?')[0]
             await page.goto(scrape_url, wait_until="domcontentloaded")
             
@@ -696,7 +696,7 @@ class AEDumperGUI:
                 final_filename = self.sanitize_filename(f_name)
                 self.root.after(0, lambda: self.log(f"File: {final_filename}"))
             except Exception as e:
-                self.root.after(0, lambda: self.log(f"Warn Metadati: {e}"))
+                self.root.after(0, lambda: self.log(f"Metadata Warn: {e}"))
 
             # Player
             player_url = user_url
@@ -704,7 +704,7 @@ class AEDumperGUI:
                 player_url += "&viewpart=videoplayer" if "?" in player_url else "?viewpart=videoplayer"
             
             await page.goto(player_url)
-            self.root.after(0, lambda: self.log("Cattura m3u8..."))
+            self.root.after(0, lambda: self.log("Capturing m3u8..."))
             
             final_m3u8 = None
             for _ in range(60):
@@ -725,10 +725,105 @@ class AEDumperGUI:
             if final_m3u8:
                 await self.parse_m3u8(final_m3u8, final_filename)
             else:
-                self.root.after(0, lambda: self.log("M3U8 non trovato."))
+                self.root.after(0, lambda: self.log("M3U8 not found."))
                 
         except Exception as e:
-            self.root.after(0, lambda: self.log(f"Errore Video: {e}"))
+            self.root.after(0, lambda: self.log(f"Video Error: {e}"))
+
+    def start_login(self):
+        """Opens browser in visible mode for manual login."""
+        self.btn_login.config(state="disabled")
+        self.lbl_status.config(text="Opening browser for login...")
+        threading.Thread(target=self.run_login_task, daemon=True).start()
+
+    def run_login_task(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.login_task())
+        loop.close()
+
+    async def login_task(self):
+        user_data_dir = os.path.join(os.getcwd(), "chrome_profile")
+        proxy_url = self._get_proxy_url()
+        proxy_cfg = {"server": proxy_url} if proxy_url else None
+        logged_in = False
+        try:
+            async with async_playwright() as p:
+                self.root.after(0, lambda: self.log("Starting Playwright..."))
+
+                try:
+                    context = await p.chromium.launch_persistent_context(
+                        user_data_dir,
+                        headless=False,
+                        proxy=proxy_cfg,
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        viewport={"width": 1280, "height": 720},
+                        args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
+                    )
+                except Exception as ex:
+                    err = str(ex)
+                    self.root.after(0, lambda e=err: self.log(f"Browser launch error: {e}"))
+                    return
+
+                self.root.after(0, lambda: self.log("Browser open."))
+                page = context.pages[0] if context.pages else await context.new_page()
+
+                try:
+                    await Stealth().apply_stealth_async(page)
+                except Exception as ex:
+                    err = str(ex)
+                    self.root.after(0, lambda e=err: self.log(f"Warn stealth: {e}"))
+
+                try:
+                    await page.goto("https://www.adultempire.com/account/loginpage", wait_until="domcontentloaded", timeout=30000)
+                except Exception as ex:
+                    err = str(ex)
+                    self.root.after(0, lambda e=err: self.log(f"Navigation error: {e}"))
+
+                self.root.after(0, lambda: self.log("Please login in the browser. It will be detected automatically..."))
+                self.root.after(0, lambda: self.lbl_status.config(text="Waiting for login..."))
+
+                for _ in range(600):  # 10 minutes max
+                    try:
+                        if not context.pages:
+                            self.root.after(0, lambda: self.log("Browser closed by user."))
+                            break
+                        content = await page.content()
+                        if "Log Out" in content or "Sign Out" in content or "My Account" in content:
+                            logged_in = True
+                            break
+                    except Exception as ex:
+                        err = str(ex)
+                        # If page is navigating it's normal, wait and retry
+                        if "navigating" in err or "content" in err.lower():
+                            await asyncio.sleep(1)
+                            continue
+                        # True disconnection (browser closed by user)
+                        self.root.after(0, lambda e=err: self.log(f"Browser disconnected: {e}"))
+                        break
+                    await asyncio.sleep(1)
+
+                if logged_in:
+                    self.root.after(0, lambda: self.log("✓ Login completed! Session saved in chrome_profile."))
+                    self.root.after(0, lambda: self.lbl_status.config(text="Login saved."))
+                    self.root.after(0, lambda: self.lbl_login_status.config(text="● Logged in", fg="#44ff88"))
+                    await asyncio.sleep(2)
+                else:
+                    self.root.after(0, lambda: self.log("Login not completed or window closed before login."))
+                    self.root.after(0, lambda: self.lbl_status.config(text="Login not completed."))
+
+                try:
+                    await context.close()
+                except Exception:
+                    pass
+
+        except Exception as ex:
+            err = str(ex)
+            self.root.after(0, lambda e=err: self.log(f"Login error: {e}"))
+        finally:
+            self.root.after(0, lambda: self.btn_login.config(state="normal"))
+            self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
+
 
     def create_context_menu(self, widget):
         menu = tk.Menu(self.root, tearoff=0)
