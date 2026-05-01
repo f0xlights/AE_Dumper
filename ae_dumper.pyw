@@ -155,6 +155,39 @@ class AEDumperGUI:
         chk_date = tk.Checkbutton(sett_cnt, text="--no-date-info (Non scrivere data nel file)", variable=self.var_no_date, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
         chk_date.pack(anchor="w")
 
+        # --- Proxy Settings ---
+        tk.Frame(sett_cnt, bg="#444444", height=1).pack(fill="x", pady=(15, 5))
+        lbl_proxy_title = tk.Label(sett_cnt, text="Proxy SOCKS5", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold"))
+        lbl_proxy_title.pack(anchor="w", pady=(0, 5))
+
+        self.var_proxy_enabled = tk.BooleanVar(value=self.config.get("proxy_enabled", False))
+        self.var_proxy_enabled.trace("w", self.save_config_callback)
+        chk_proxy = tk.Checkbutton(
+            sett_cnt, text="Abilita Proxy SOCKS5",
+            variable=self.var_proxy_enabled,
+            bg="#1a1a1a", fg="white", selectcolor="#333333",
+            activebackground="#1a1a1a", activeforeground="white",
+            font=("Segoe UI", 10)
+        )
+        chk_proxy.pack(anchor="w")
+
+        fr_proxy = tk.Frame(sett_cnt, bg="#1a1a1a")
+        fr_proxy.pack(anchor="w", pady=(5, 0))
+
+        tk.Label(fr_proxy, text="Host:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
+        self.proxy_host_var = tk.StringVar(value=self.config.get("proxy_host", "192.168.0.90"))
+        self.ent_proxy_host = ttk.Entry(fr_proxy, textvariable=self.proxy_host_var, width=22)
+        self.ent_proxy_host.pack(side="left", padx=(5, 15))
+        self.proxy_host_var.trace("w", self.save_config_callback)
+        self.create_context_menu(self.ent_proxy_host)
+
+        tk.Label(fr_proxy, text="Porta:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
+        self.proxy_port_var = tk.StringVar(value=self.config.get("proxy_port", "9118"))
+        self.ent_proxy_port = ttk.Entry(fr_proxy, textvariable=self.proxy_port_var, width=7)
+        self.ent_proxy_port.pack(side="left", padx=5)
+        self.proxy_port_var.trace("w", self.save_config_callback)
+        self.create_context_menu(self.ent_proxy_port)
+
 
         # --- Shared Settings Area (Bottom) ---
         settings_frame = tk.Frame(self.root, bg="#1a1a1a")
@@ -212,7 +245,14 @@ class AEDumperGUI:
         if "flag_no_log" not in self.config:
             self.config["flag_no_log"] = True
         if "flag_no_date" not in self.config:
-             self.config["flag_no_date"] = True
+            self.config["flag_no_date"] = True
+        # Proxy defaults
+        if "proxy_enabled" not in self.config:
+            self.config["proxy_enabled"] = False
+        if "proxy_host" not in self.config:
+            self.config["proxy_host"] = "192.168.0.90"
+        if "proxy_port" not in self.config:
+            self.config["proxy_port"] = "9118"
 
     def save_config(self):
         self.config["download_path"] = self.dl_path_var.get()
@@ -222,10 +262,14 @@ class AEDumperGUI:
         self.config["threads"] = self.threads_var.get()
         self.config["flag_no_log"] = self.var_no_log.get()
         self.config["flag_no_date"] = self.var_no_date.get()
+        # Proxy
+        self.config["proxy_enabled"] = self.var_proxy_enabled.get()
+        self.config["proxy_host"] = self.ent_proxy_host.get().strip()
+        self.config["proxy_port"] = self.ent_proxy_port.get().strip()
         
         try:
             with open(self.config_file, 'w') as f:
-                json.dump(self.config, f)
+                json.dump(self.config, f, indent=2)
         except Exception as e:
             print(f"Error saving config: {e}")
 
@@ -281,11 +325,21 @@ class AEDumperGUI:
         # Start the background task
         threading.Thread(target=self.run_async_task, args=(url,), daemon=True).start()
 
+    def _get_proxy_url(self):
+        """Restituisce la stringa del proxy socks5 se abilitato, altrimenti None."""
+        if self.var_proxy_enabled.get():
+            host = self.ent_proxy_host.get().strip()
+            port = self.ent_proxy_port.get().strip()
+            if host and port:
+                return f"socks5://{host}:{port}"
+        return None
+
     async def parse_m3u8(self, m3u8_url, filename="master"):
         try:
             self.root.after(0, lambda: self.log("Parsing master.m3u8..."))
-            # requests is blocking, but acceptable here. Ideally use aiohttp.
-            response = requests.get(m3u8_url)
+            proxy_url = self._get_proxy_url()
+            proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
+            response = requests.get(m3u8_url, proxies=proxies, timeout=30)
             response.raise_for_status()
             content = response.text
             
@@ -529,9 +583,14 @@ class AEDumperGUI:
 
     async def init_browser_session(self, p, user_data_dir, is_headless):
         try:
+            proxy_url = self._get_proxy_url()
+            proxy_cfg = {"server": proxy_url} if proxy_url else None
+            if proxy_url:
+                self.root.after(0, lambda pu=proxy_url: self.log(f"Proxy attivo: {pu}"))
             context = await p.chromium.launch_persistent_context(
                 user_data_dir,
                 headless=is_headless,
+                proxy=proxy_cfg,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 viewport={"width": 1280, "height": 720},
                 args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]

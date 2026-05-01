@@ -1,1 +1,11 @@
-{"download_path": "C:\\Users\\nicco\\Downloads", "quality": "1080p", "filename_template": "{date} - {cast} - {title} [{studio}]", "threads": "32", "flag_no_log": true, "flag_no_date": true}
+{
+  "download_path": "C:\\Users\\nicco\\Downloads",
+  "quality": "Migliore",
+  "filename_template": "{date} - {cast} - {title} [{studio}]",
+  "threads": "32",
+  "flag_no_log": true,
+  "flag_no_date": true,
+  "proxy_enabled": false,
+  "proxy_host": "192.168.0.90",
+  "proxy_port": "9118"
+}

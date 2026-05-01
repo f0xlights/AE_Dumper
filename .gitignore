@@ -2,3 +2,9 @@
 venv/
 env/
 __pycache__/
+
+# Chrome persistent session (cookies, cache, credenziali salvate)
+chrome_profile/
+
+# Config locale (percorsi personali, impostazioni proxy, ecc.)
+config.json
