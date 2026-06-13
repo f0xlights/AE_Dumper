@@ -34,6 +34,9 @@ class AEDumperGUI:
             print(f"Errore caricamento icona: {e}")
 
         self.setup_ui()
+        
+        # Check session on startup in background thread
+        threading.Thread(target=self.run_startup_check, daemon=True).start()
 
     def setup_ui(self):
         style = ttk.Style()
@@ -155,6 +158,28 @@ class AEDumperGUI:
         chk_date = tk.Checkbutton(sett_cnt, text="--no-date-info (Don't write date in file)", variable=self.var_no_date, bg="#1a1a1a", fg="white", selectcolor="#333333", activebackground="#1a1a1a", activeforeground="white")
         chk_date.pack(anchor="w")
 
+        # --- Credentials Settings ---
+        tk.Frame(sett_cnt, bg="#444444", height=1).pack(fill="x", pady=(15, 5))
+        lbl_creds_title = tk.Label(sett_cnt, text="Account Credentials", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold"))
+        lbl_creds_title.pack(anchor="w", pady=(0, 5))
+
+        fr_creds = tk.Frame(sett_cnt, bg="#1a1a1a")
+        fr_creds.pack(anchor="w", pady=(5, 0))
+
+        tk.Label(fr_creds, text="Email:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
+        self.username_var = tk.StringVar(value=self.config.get("username", USERNAME))
+        self.ent_username = ttk.Entry(fr_creds, textvariable=self.username_var, width=30)
+        self.ent_username.pack(side="left", padx=(5, 15))
+        self.username_var.trace("w", self.save_config_callback)
+        self.create_context_menu(self.ent_username)
+
+        tk.Label(fr_creds, text="Password:", bg="#1a1a1a", fg="white", font=("Segoe UI", 10)).pack(side="left")
+        self.password_var = tk.StringVar(value=self.config.get("password", PASSWORD))
+        self.ent_password = ttk.Entry(fr_creds, textvariable=self.password_var, show="*", width=20)
+        self.ent_password.pack(side="left", padx=5)
+        self.password_var.trace("w", self.save_config_callback)
+        self.create_context_menu(self.ent_password)
+
         # --- Proxy Settings ---
         tk.Frame(sett_cnt, bg="#444444", height=1).pack(fill="x", pady=(15, 5))
         lbl_proxy_title = tk.Label(sett_cnt, text="Proxy", bg="#1a1a1a", fg="#ff9900", font=("Segoe UI", 10, "bold"))
@@ -257,6 +282,11 @@ class AEDumperGUI:
             self.config["flag_no_log"] = True
         if "flag_no_date" not in self.config:
             self.config["flag_no_date"] = True
+        # Credentials defaults
+        if "username" not in self.config:
+            self.config["username"] = USERNAME
+        if "password" not in self.config:
+            self.config["password"] = PASSWORD
         # Proxy defaults
         if "proxy_enabled" not in self.config:
             self.config["proxy_enabled"] = False
@@ -273,6 +303,9 @@ class AEDumperGUI:
         self.config["threads"] = self.threads_var.get()
         self.config["flag_no_log"] = self.var_no_log.get()
         self.config["flag_no_date"] = self.var_no_date.get()
+        # Credentials
+        self.config["username"] = self.username_var.get().strip()
+        self.config["password"] = self.password_var.get().strip()
         # Proxy
         self.config["proxy_enabled"] = self.var_proxy_enabled.get()
         self.config["proxy_type"] = self.proxy_type_var.get()
@@ -736,30 +769,70 @@ class AEDumperGUI:
             self.root.after(0, lambda: self.log(f"Video Error: {e}"))
 
     def start_login(self):
-        """Opens browser in visible mode for manual login."""
+        """Opens browser in visible mode for manual login (user clicked button)."""
         self.btn_login.config(state="disabled")
         self.lbl_status.config(text="Opening browser for login...")
-        threading.Thread(target=self.run_login_task, daemon=True).start()
+        threading.Thread(target=self.run_login_task, args=(True,), daemon=True).start()
 
-    def run_login_task(self):
+    def start_login_auto(self):
+        """Starts automatic login in the background (headless first)."""
+        self.btn_login.config(state="disabled")
+        self.lbl_status.config(text="Logging in automatically...")
+        threading.Thread(target=self.run_login_task, args=(False,), daemon=True).start()
+
+    def run_startup_check(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.login_task())
+        try:
+            loop.run_until_complete(self.startup_check_task())
+        except Exception as e:
+            print(f"Startup check thread error: {e}")
         loop.close()
 
-    async def login_task(self):
+    async def startup_check_task(self):
+        self.root.after(0, lambda: self.lbl_status.config(text="Verifying session..."))
+        user_data_dir = os.path.join(os.getcwd(), "chrome_profile")
+        
+        try:
+            async with async_playwright() as p:
+                context, page = await self.init_browser_session(p, user_data_dir, is_headless=True)
+                if page:
+                    self.root.after(0, lambda: self.log("Session active OK on startup."))
+                    self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
+                    await context.close()
+                else:
+                    self.root.after(0, lambda: self.log("Session expired or missing. Starting automatic login..."))
+                    self.root.after(0, self.start_login_auto)
+        except Exception as e:
+            self.root.after(0, lambda: self.log(f"Session check error: {e}"))
+            self.root.after(0, lambda: self.log("Starting automatic login..."))
+            self.root.after(0, self.start_login_auto)
+
+    def run_login_task(self, force_headed=False):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.login_task(force_headed))
+        loop.close()
+
+    async def login_task(self, force_headed=False):
         user_data_dir = os.path.join(os.getcwd(), "chrome_profile")
         proxy_url = self._get_proxy_url()
         proxy_cfg = {"server": proxy_url} if proxy_url else None
         logged_in = False
+        
+        is_headless = not force_headed
+        
         try:
             async with async_playwright() as p:
-                self.root.after(0, lambda: self.log("Starting Playwright..."))
+                if is_headless:
+                    self.root.after(0, lambda: self.log("Starting automatic login in background..."))
+                else:
+                    self.root.after(0, lambda: self.log("Starting Playwright (headed mode)..."))
 
                 try:
                     context = await p.chromium.launch_persistent_context(
                         user_data_dir,
-                        headless=False,
+                        headless=is_headless,
                         proxy=proxy_cfg,
                         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                         viewport={"width": 1280, "height": 720},
@@ -770,7 +843,6 @@ class AEDumperGUI:
                     self.root.after(0, lambda e=err: self.log(f"Browser launch error: {e}"))
                     return
 
-                self.root.after(0, lambda: self.log("Browser open."))
                 page = context.pages[0] if context.pages else await context.new_page()
 
                 try:
@@ -791,10 +863,64 @@ class AEDumperGUI:
                     err = str(ex)
                     self.root.after(0, lambda e=err: self.log(f"Navigation error: {e}"))
 
-                self.root.after(0, lambda: self.log("Please login in the browser. It will be detected automatically..."))
-                self.root.after(0, lambda: self.lbl_status.config(text="Waiting for login..."))
+                # Captcha selectors to verify if a captcha challenge is visible
+                captcha_selectors = [
+                    'iframe[src*="recaptcha"]',
+                    'iframe[src*="turnstile"]',
+                    '.g-recaptcha',
+                    '#g-recaptcha-response',
+                    '.cf-turnstile',
+                    'div:has-text("captcha")'
+                ]
 
-                for _ in range(600):  # 10 minutes max
+                # Check if captcha is visible on the page before auto-filling
+                if is_headless:
+                    has_captcha = False
+                    for selector in captcha_selectors:
+                        try:
+                            loc = page.locator(selector)
+                            if await loc.count() > 0 and await loc.first.is_visible():
+                                has_captcha = True
+                                break
+                        except:
+                            pass
+                    
+                    if has_captcha:
+                        self.root.after(0, lambda: self.log("reCAPTCHA detected! Switching to headed mode for manual login..."))
+                        await context.close()
+                        # Run headed login task
+                        self.root.after(0, lambda: threading.Thread(target=self.run_login_task, args=(True,), daemon=True).start())
+                        return
+
+                # Auto-fill credentials and submit
+                try:
+                    self.root.after(0, lambda: self.log("Auto-filling credentials..."))
+                    await page.wait_for_selector("#login_username", timeout=10000)
+                    await asyncio.sleep(0.5)
+                    
+                    username = self.username_var.get().strip()
+                    password = self.password_var.get().strip()
+                    
+                    await page.fill("#login_username", username)
+                    await asyncio.sleep(0.3)
+                    await page.fill("#login_password", password)
+                    await asyncio.sleep(0.3)
+                    
+                    login_btn = page.locator('form[action*="Login"] button[type="submit"], button:has-text("Log In"), button:has-text("Sign In")').first
+                    if await login_btn.is_visible():
+                        self.root.after(0, lambda: self.log("Submitting login form..."))
+                        await login_btn.click()
+                except Exception as ex:
+                    self.root.after(0, lambda: self.log(f"Auto-fill error: {ex}"))
+
+                if is_headless:
+                    self.root.after(0, lambda: self.log("Waiting for automated login completion..."))
+                    self.root.after(0, lambda: self.lbl_status.config(text="Logging in automatically..."))
+                else:
+                    self.root.after(0, lambda: self.log("Please login in the browser. It will be detected automatically..."))
+                    self.root.after(0, lambda: self.lbl_status.config(text="Waiting for login..."))
+
+                for _ in range(30 if is_headless else 600):  # 30 seconds max for auto, 10 minutes max for manual
                     try:
                         if not context.pages:
                             self.root.after(0, lambda: self.log("Browser closed by user."))
@@ -803,6 +929,22 @@ class AEDumperGUI:
                         if "Log Out" in content or "Sign Out" in content or "My Account" in content:
                             logged_in = True
                             break
+                        
+                        # In headless mode, check if a captcha was triggered during login
+                        if is_headless and _ > 3:
+                            has_captcha = False
+                            for selector in captcha_selectors:
+                                try:
+                                    loc = page.locator(selector)
+                                    if await loc.count() > 0 and await loc.first.is_visible():
+                                        has_captcha = True
+                                        break
+                                except:
+                                    pass
+                            if has_captcha:
+                                self.root.after(0, lambda: self.log("reCAPTCHA triggered during login! Switching to headed mode..."))
+                                logged_in = False
+                                break
                     except Exception as ex:
                         err = str(ex)
                         # If page is navigating it's normal, wait and retry
@@ -820,8 +962,14 @@ class AEDumperGUI:
                     self.root.after(0, lambda: self.lbl_login_status.config(text="● Logged in", fg="#44ff88"))
                     await asyncio.sleep(2)
                 else:
-                    self.root.after(0, lambda: self.log("Login not completed or window closed before login."))
-                    self.root.after(0, lambda: self.lbl_status.config(text="Login not completed."))
+                    if is_headless:
+                        self.root.after(0, lambda: self.log("Automatic login failed or reCAPTCHA detected. Opening headed browser..."))
+                        await context.close()
+                        self.root.after(0, lambda: threading.Thread(target=self.run_login_task, args=(True,), daemon=True).start())
+                        return
+                    else:
+                        self.root.after(0, lambda: self.log("Login not completed or window closed before login."))
+                        self.root.after(0, lambda: self.lbl_status.config(text="Login not completed."))
 
                 try:
                     await context.close()
@@ -831,9 +979,12 @@ class AEDumperGUI:
         except Exception as ex:
             err = str(ex)
             self.root.after(0, lambda e=err: self.log(f"Login error: {e}"))
+            if is_headless:
+                self.root.after(0, lambda: threading.Thread(target=self.run_login_task, args=(True,), daemon=True).start())
         finally:
-            self.root.after(0, lambda: self.btn_login.config(state="normal"))
-            self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
+            if not is_headless or logged_in:
+                self.root.after(0, lambda: self.btn_login.config(state="normal"))
+                self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
 
 
     def create_context_menu(self, widget):
