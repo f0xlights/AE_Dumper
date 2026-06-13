@@ -33,10 +33,14 @@ class AEDumperGUI:
         except Exception as e:
             print(f"Errore caricamento icona: {e}")
 
+        self.active_processes = []
         self.setup_ui()
         
         # Check session on startup in background thread
         threading.Thread(target=self.run_startup_check, daemon=True).start()
+        
+        # Clean shutdown handling
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def setup_ui(self):
         style = ttk.Style()
@@ -498,6 +502,10 @@ class AEDumperGUI:
         
         self.root.after(0, lambda: self.log(f"Starting download {label}..."))
         
+        # Create output dir if it doesn't exist
+        os.makedirs(save_dir, exist_ok=True)
+        
+        process = None
         try:
             # Use asyncio subprocess to read output
             # creationflags=0x08000000 is CREATE_NO_WINDOW on Windows
@@ -507,11 +515,10 @@ class AEDumperGUI:
                 stderr=asyncio.subprocess.STDOUT,
                 creationflags=0x08000000
             )
+            self.active_processes.append(process)
 
             # Regex to strip ANSI escape codes
             ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-            
-            last_progress_time = 0
             
             # Read output for progress
             while True:
@@ -543,17 +550,20 @@ class AEDumperGUI:
                                  self.root.after(0, lambda v=p: update_log_progress(v))
                          except:
                              pass
-
+            
             return_code = await process.wait()
             
             if return_code == 0:
                 self.root.after(0, lambda: self.log("Download Completed! 100%"))
                 self.root.after(0, lambda: self.lbl_status.config(text="Completed."))
             else:
-                 self.root.after(0, lambda: self.log(f"Download error. Code: {return_code}"))
+                self.root.after(0, lambda: self.log(f"Download error. Code: {return_code}"))
 
         except Exception as e:
             self.root.after(0, lambda: self.log(f"Download exception: {str(e)}"))
+        finally:
+            if process and process in self.active_processes:
+                self.active_processes.remove(process)
 
 
 
@@ -600,27 +610,31 @@ class AEDumperGUI:
                 self.reset_ui_state()
                 return
 
-            # Setup M3U8 Listener
-            self.captured_m3u8s = []
-            async def handle_request(request):
-                if ".m3u8" in request.url:
-                    self.captured_m3u8s.append(request.url)
-            page.on("request", handle_request)
+            try:
+                # Setup M3U8 Listener
+                self.captured_m3u8s = []
+                async def handle_request(request):
+                    if ".m3u8" in request.url:
+                        self.captured_m3u8s.append(request.url)
+                page.on("request", handle_request)
 
-            # 2. Process URLs
-            total = len(urls)
-            for i, url in enumerate(urls):
-                if is_batch:
-                    msg = f"\n>>> Processing [{i+1}/{total}]: {url}"
-                    self.root.after(0, lambda m=msg: self.log(m))
-                    self.root.after(0, lambda m=f"Batch {i+1}/{total}": self.lbl_status.config(text=m))
-                
-                self.captured_m3u8s.clear() # Reset for this video
-                await self.process_video(page, url)
-            
-            await context.close()
-            self.root.after(0, lambda: self.log("\nBatch Completed."))
-            self.reset_ui_state()
+                # 2. Process URLs
+                total = len(urls)
+                for i, url in enumerate(urls):
+                    if is_batch:
+                        msg = f"\n>>> Processing [{i+1}/{total}]: {url}"
+                        self.root.after(0, lambda m=msg: self.log(m))
+                        self.root.after(0, lambda m=f"Batch {i+1}/{total}": self.lbl_status.config(text=m))
+                    
+                    self.captured_m3u8s.clear() # Reset for this video
+                    try:
+                        await self.process_video(page, url)
+                    except Exception as e:
+                        self.root.after(0, lambda err=e: self.log(f"Error processing video: {err}"))
+            finally:
+                await context.close()
+                self.root.after(0, lambda: self.log("\nBatch Completed."))
+                self.reset_ui_state()
 
     def reset_ui_state(self):
         self.root.after(0, lambda: self.btn_find.config(state="normal"))
@@ -986,6 +1000,16 @@ class AEDumperGUI:
                 self.root.after(0, lambda: self.btn_login.config(state="normal"))
                 self.root.after(0, lambda: self.lbl_status.config(text="Ready."))
 
+
+    def on_closing(self):
+        """Kills any active subprocesses on exit to avoid orphan processes."""
+        if hasattr(self, 'active_processes'):
+            for p in self.active_processes:
+                try:
+                    p.terminate()
+                except:
+                    pass
+        self.root.destroy()
 
     def create_context_menu(self, widget):
         menu = tk.Menu(self.root, tearoff=0)
