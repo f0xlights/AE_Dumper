@@ -616,12 +616,17 @@ class AEDumperGUI:
             await page.goto("https://www.adultempire.com/", wait_until="domcontentloaded")
 
             # Age Gate
-            if "Confirm You Are Over 18" in await page.content():
+            content = await page.content()
+            age_gate_btn = page.locator("#ageConfirmationButton")
+            if "confirm you are over 18" in content.lower() or "ageconfirmation" in page.url.lower() or await age_gate_btn.count() > 0:
                 self.root.after(0, lambda: self.log("Age Gate..."))
-                enter_btn = page.locator("a:has-text('Enter'), button:has-text('Enter')").first
-                if await enter_btn.is_visible():
-                    await enter_btn.click()
-                    await page.wait_for_load_state("networkidle")
+                if await age_gate_btn.is_visible():
+                    await age_gate_btn.click()
+                else:
+                    enter_btn = page.locator("a:has-text('Enter'), button:has-text('Enter'), button:has-text('18+')").first
+                    if await enter_btn.is_visible():
+                        await enter_btn.click()
+                await page.wait_for_load_state("networkidle")
 
             content = await page.content()
             if "Log Out" in content or "Sign Out" in content or "My Account" in content:
@@ -776,6 +781,12 @@ class AEDumperGUI:
 
                 try:
                     await page.goto("https://www.adultempire.com/account/loginpage", wait_until="domcontentloaded", timeout=30000)
+                    # Automate Age Gate if visible so user gets directly to the login form
+                    age_gate_btn = page.locator("#ageConfirmationButton")
+                    if await age_gate_btn.is_visible():
+                        self.root.after(0, lambda: self.log("Automating Age Gate..."))
+                        await age_gate_btn.click()
+                        await page.wait_for_load_state("networkidle")
                 except Exception as ex:
                     err = str(ex)
                     self.root.after(0, lambda e=err: self.log(f"Navigation error: {e}"))
